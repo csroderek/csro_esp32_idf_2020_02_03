@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "csro_common.h": "c",
+        "nvs_flash.h": "c"
+    }
+}

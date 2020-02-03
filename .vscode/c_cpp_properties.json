@@ -13,7 +13,13 @@
                 "C:/Espressif/esp-idf/components/xtensa/esp32/include",
                 "C:/Espressif/esp-idf/components/soc/esp32/include",
                 "C:/Espressif/esp-idf/components/heap/include",
-                "C:/Espressif/esp-idf/components/spi_flash/include"
+                "C:/Espressif/esp-idf/components/spi_flash/include",
+                "C:/Espressif/esp-idf/components/mqtt/esp-mqtt/include",
+                "C:/Espressif/esp-idf/components/esp_event/include",
+                "C:/Espressif/esp-idf/components/esp_wifi/include",
+                "C:/Espressif/esp-idf/components/esp_netif/include",
+                "C:/Espressif/esp-idf/components/nvs_flash/include",
+                "C:/Espressif/esp-idf/components/soc/include"
             ],
             "defines": [
                 "_DEBUG",
