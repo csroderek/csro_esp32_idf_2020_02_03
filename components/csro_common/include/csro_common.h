@@ -9,18 +9,22 @@
 #include "esp_spi_flash.h"
 #include "nvs_flash.h"
 #include "mqtt_client.h"
+#include "driver/gpio.h"
+#include "driver/touch_pad.h"
+#include "cJSON.h"
 
 #define CONFIG_IDF_TARGET_ESP32
 
 //#define USE_CLOUD_SERVER
+//#define USE_ASSIGNED_ROUTER
 
 #define MANUFACTURER "NANJING CSRO CO.,LTD."
 #define SOFT_VERSION "2020-02-03"
 
-#define MOTOR_CSRO_3K2R
+#define MOTOR_CSRO_3T2R
 /*
-#define MOTOR_CSRO_3K2R
-#define DLIGHT_CSRO_3K3SCR
+#define MOTOR_CSRO_3T2R
+#define DLIGHT_CSRO_3T3SCR
 */
 
 typedef struct

@@ -19,7 +19,11 @@
                 "C:/Espressif/esp-idf/components/esp_wifi/include",
                 "C:/Espressif/esp-idf/components/esp_netif/include",
                 "C:/Espressif/esp-idf/components/nvs_flash/include",
-                "C:/Espressif/esp-idf/components/soc/include"
+                "C:/Espressif/esp-idf/components/soc/include",
+                "C:/Espressif/esp-idf/components/driver/include",
+                "C:/Espressif/esp-idf/components/esp32/include",
+                "C:/Espressif/esp-idf/components/driver/esp32/include",
+                "C:/Espressif/esp-idf/components/json/cJSON"
             ],
             "defines": [
                 "_DEBUG",

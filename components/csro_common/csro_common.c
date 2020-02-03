@@ -1,4 +1,5 @@
 #include "csro_common.h"
+#include "csro_devices.h"
 
 csro_system sysinfo;
 csro_mqtt mqttinfo;
@@ -14,7 +15,10 @@ void csro_main(void)
     nvs_get_u8(handle, "router_flag", &sysinfo.router_flag);
     nvs_commit(handle);
     nvs_close(handle);
-    printf("Power count %d.\r\n", sysinfo.power_cnt);
+    csro_device_init();
+#ifdef USE_ASSIGNED_ROUTER
+    sysinfo.router_flag = 1;
+#endif
     if (sysinfo.router_flag == 1)
     {
         printf("starting mqtt......\r\n");
