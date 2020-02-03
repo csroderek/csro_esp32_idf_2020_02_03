@@ -1,0 +1,33 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/Espressif/.espressif/tools/xtensa-esp32-elf/esp-2019r2-8.2.0/xtensa-esp32-elf/xtensa-esp32-elf/include",
+                "C:/Espressif/.espressif/tools/xtensa-esp32-elf/esp-2019r2-8.2.0/xtensa-esp32-elf/lib/gcc/xtensa-esp32-elf/8.2.0/include",
+                "C:/Espressif/esp-idf/components/freertos/include",
+                "C:/Espressif/esp-idf/components/esp_common/include",
+                "C:/Espressif/esp-idf/components/spi_flash/sim/sdkconfig",
+                "C:/Espressif/esp-idf/components/xtensa/include",
+                "C:/Espressif/esp-idf/components/xtensa/esp32/include",
+                "C:/Espressif/esp-idf/components/soc/esp32/include",
+                "C:/Espressif/esp-idf/components/heap/include",
+                "C:/Espressif/esp-idf/components/spi_flash/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "intelliSenseMode": "msvc-x64",
+            "browse": {
+                "path": [
+                    "C:\\Espressif\\esp-idf\\components",
+                    "C:\\Espressif\\.espressif\\tools\\xtensa-esp32-elf\\esp-2019r2-8.2.0\\xtensa-esp32-elf"
+                ]
+            }
+        }
+    ],
+    "version": 4
+}
