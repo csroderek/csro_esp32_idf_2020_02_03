@@ -23,7 +23,15 @@
                 "C:/Espressif/esp-idf/components/driver/include",
                 "C:/Espressif/esp-idf/components/esp32/include",
                 "C:/Espressif/esp-idf/components/driver/esp32/include",
-                "C:/Espressif/esp-idf/components/json/cJSON"
+                "C:/Espressif/esp-idf/components/json/cJSON",
+                "C:/Espressif/esp-idf/components/lwip/lwip/src/include",
+                "C:/Espressif/esp-idf/components/lwip/port/esp32/include",
+                "C:/Espressif/esp-idf/components/vfs/include",
+                "C:/Espressif/esp-idf/components/lwip/include/apps/sntp",
+                "C:/Espressif/esp-idf/components/newlib/platform_include",
+                "C:/Espressif/esp-idf/components/esp_netif/lwip",
+                "C:/Espressif/esp-idf/components/tcpip_adapter/include",
+                "C:/Espressif/esp-idf/components/lwip/include/apps"
             ],
             "defines": [
                 "_DEBUG",

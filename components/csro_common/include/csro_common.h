@@ -7,13 +7,14 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "esp_spi_flash.h"
+#include "esp_smartconfig.h"
+#include "esp_wifi.h"
 #include "nvs_flash.h"
 #include "mqtt_client.h"
 #include "driver/gpio.h"
 #include "driver/touch_pad.h"
 #include "cJSON.h"
-
-#define CONFIG_IDF_TARGET_ESP32
+#include "lwip/sockets.h"
 
 //#define USE_CLOUD_SERVER
 //#define USE_ASSIGNED_ROUTER
@@ -37,7 +38,7 @@ typedef struct
     char mac_str[20];
     uint8_t ip[4];
     char ip_str[20];
-    char host_name[20];
+    char host_name[30];
     char dev_type[20];
     uint32_t power_cnt;
     uint32_t time_run;
@@ -53,7 +54,7 @@ typedef struct
     char lwt_topic[100];
     char content[1000];
     char broker[50];
-    char uri[50];
+    char uri[60];
     char prefix[50];
 } csro_mqtt;
 

@@ -2,7 +2,7 @@
 
 #ifdef MOTOR_CSRO_3T2R
 
-#define THRESHOLD 10
+#define THRESHOLD 15
 
 #define TOUCH_01_NUM 0
 #define TOUCH_02_NUM 2
@@ -39,7 +39,7 @@ static void motor_csro_3t2r_mqtt_update(void)
 {
     if (mqttclient != NULL)
     {
-        printf("mq update!\r\n");
+        // printf("mq update!\r\n");
         cJSON *state_json = cJSON_CreateObject();
         cJSON_AddNumberToObject(state_json, "state", 50);
         cJSON_AddNumberToObject(state_json, "run", sysinfo.time_run);
@@ -132,25 +132,37 @@ static void motor_csro_3t2r_touch_task(void *args)
     touch_pad_set_voltage(TOUCH_HVOLT_2V7, TOUCH_LVOLT_0V5, TOUCH_HVOLT_ATTEN_1V);
     for (int i = 0; i < 4; i++)
     {
-        vTaskDelay(100 / portTICK_PERIOD_MS);
         touch_pad_config(i, 0);
+    }
+    touch_pad_filter_start(10);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    for (int i = 0; i < 4; i++)
+    {
         vTaskDelay(100 / portTICK_PERIOD_MS);
-        touch_pad_read(i, &first_touch_value[i]);
+        touch_pad_read_filtered(i, &first_touch_value[i]);
     }
 
     while (true)
     {
         uint8_t touch_state[3];
+        uint16_t touch_value_g[3];
         led_mode led_temp = NORMAL;
         for (uint8_t i = 0; i < 4; i++)
         {
             uint16_t touch_value;
-            touch_pad_read(i, &touch_value);
+            touch_pad_read_filtered(i, &touch_value);
             if (i != 1)
             {
                 touch_state[i == 0 ? 0 : i == 2 ? 1 : 2] = (first_touch_value[i] > touch_value && (first_touch_value[i] - touch_value >= THRESHOLD)) ? 1 : 0;
+                touch_value_g[i == 0 ? 0 : i == 2 ? 1 : 2] = touch_value;
                 led_on[i == 0 ? 0 : i == 2 ? 1 : 2] = touch_state[i == 0 ? 0 : i == 2 ? 1 : 2];
             }
+        }
+        if (mqttclient != NULL)
+        {
+            sprintf(mqttinfo.pub_topic, "csro/touchkey/state");
+            sprintf(mqttinfo.content, "%d(%d) || %d(%d) || %d(%d)\r\n", first_touch_value[0] - touch_value_g[0], touch_value_g[0], first_touch_value[2] - touch_value_g[1], touch_value_g[1], first_touch_value[3] - touch_value_g[2], touch_value_g[2]);
+            esp_mqtt_client_publish(mqttclient, mqttinfo.pub_topic, mqttinfo.content, 0, 0, 1);
         }
         if (touch_state[0] + touch_state[1] + touch_state[2] == 1)
         {
@@ -250,9 +262,9 @@ void csro_motor_csro_3t2r_on_connect(esp_mqtt_event_handle_t event)
     cJSON_AddStringToObject(config_json, "cmd_t", "~/set");
     cJSON_AddStringToObject(config_json, "pos_t", "~/state");
     cJSON_AddStringToObject(config_json, "avty_t", "~/available");
-    cJSON_AddStringToObject(config_json, "pl_open", "up");
+    cJSON_AddStringToObject(config_json, "pl_open", "open");
     cJSON_AddStringToObject(config_json, "pl_stop", "stop");
-    cJSON_AddStringToObject(config_json, "pl_cls", "down");
+    cJSON_AddStringToObject(config_json, "pl_cls", "close");
     cJSON_AddStringToObject(config_json, "val_tpl", "{{value_json.state}}");
     cJSON_AddStringToObject(config_json, "opt", "false");
     cJSON_AddItemToObject(config_json, "dev", device);
@@ -279,8 +291,9 @@ void csro_motor_csro_3t2r_on_message(esp_mqtt_event_handle_t event)
     sprintf(topic, "csro/%s/%s/set", sysinfo.mac_str, sysinfo.dev_type);
     if (strncmp(topic, event->topic, event->topic_len) == 0)
     {
-        if (strncmp("up", event->data, event->data_len) == 0)
+        if (strncmp("open", event->data, event->data_len) == 0)
         {
+            // printf("open\r\n");
             if (motor == STOP || motor == STOP_TO_CLOSE)
             {
                 motor = OPEN;
@@ -292,10 +305,12 @@ void csro_motor_csro_3t2r_on_message(esp_mqtt_event_handle_t event)
         }
         else if (strncmp("stop", event->data, event->data_len) == 0)
         {
+            // printf("stop\r\n");
             motor = STOP;
         }
-        else if (strncmp("down", event->data, event->data_len) == 0)
+        else if (strncmp("close", event->data, event->data_len) == 0)
         {
+            // printf("close\r\n");
             if (motor == STOP || motor == STOP_TO_OPEN)
             {
                 motor = CLOSE;
