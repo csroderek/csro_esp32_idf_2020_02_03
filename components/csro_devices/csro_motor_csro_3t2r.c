@@ -2,19 +2,19 @@
 
 #ifdef MOTOR_CSRO_3T2R
 
-#define THRESHOLD 15
-
-#define TOUCH_01_NUM 0
-#define TOUCH_02_NUM 2
-#define TOUCH_03_NUM 3
+#define TOUCH_01_NUM GPIO_NUM_4
+#define TOUCH_02_NUM GPIO_NUM_2
+#define TOUCH_03_NUM GPIO_NUM_15
 
 #define RELAY_OPEN_NUM GPIO_NUM_27
 #define RELAY_CLOSE_NUM GPIO_NUM_14
-
-#define LED_01_NUM GPIO_NUM_19
+#define LED_01_NUM GPIO_NUM_5
 #define LED_02_NUM GPIO_NUM_18
-#define LED_03_NUM GPIO_NUM_5
-#define GPIO_OUTPUT_PIN_SEL ((1ULL << RELAY_OPEN_NUM) | (1ULL << RELAY_CLOSE_NUM) | (1ULL << LED_01_NUM) | (1ULL << LED_02_NUM) | (1ULL << LED_03_NUM))
+#define LED_03_NUM GPIO_NUM_19
+#define TOUCH_EN_NUM GPIO_NUM_16
+
+#define GPIO_INPUT_PIN_SEL ((1ULL << TOUCH_01_NUM) | (1ULL << TOUCH_02_NUM) | (1ULL << TOUCH_03_NUM))
+#define GPIO_OUTPUT_PIN_SEL ((1ULL << RELAY_OPEN_NUM) | (1ULL << RELAY_CLOSE_NUM) | (1ULL << LED_01_NUM) | (1ULL << LED_02_NUM) | (1ULL << LED_03_NUM) | (1ULL << TOUCH_EN_NUM))
 
 typedef enum
 {
@@ -25,21 +25,12 @@ typedef enum
     STOP_TO_CLOSE = 4,
 } motor_state;
 
-typedef enum
-{
-    NORMAL = 0,
-    FLASH = 1,
-} led_mode;
-
 motor_state motor = STOP;
-led_mode led = NORMAL;
-uint8_t led_on[3] = {0, 0, 0};
 
 static void motor_csro_3t2r_mqtt_update(void)
 {
     if (mqttclient != NULL)
     {
-        // printf("mq update!\r\n");
         cJSON *state_json = cJSON_CreateObject();
         cJSON_AddNumberToObject(state_json, "state", 50);
         cJSON_AddNumberToObject(state_json, "run", sysinfo.time_run);
@@ -52,11 +43,29 @@ static void motor_csro_3t2r_mqtt_update(void)
     }
 }
 
-static void motor_csro_3t2r_relay_led_task(void *args)
+static void motor_csro_3t2r_relay_task(void *args)
 {
-    static motor_state last_state = STOP;
-    static uint16_t relay_count_100ms = 0;
-    static uint16_t led_count_100ms = 0;
+    while (true)
+    {
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
+    vTaskDelete(NULL);
+}
+
+static void motor_csro_3t2r_touch_task(void *args)
+{
+    while (true)
+    {
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+        gpio_set_level(LED_01_NUM, gpio_get_level(TOUCH_01_NUM));
+        gpio_set_level(LED_02_NUM, gpio_get_level(TOUCH_02_NUM));
+        gpio_set_level(LED_03_NUM, gpio_get_level(TOUCH_03_NUM));
+    }
+    vTaskDelete(NULL);
+}
+
+void csro_motor_csro_3t2r_init(void)
+{
     gpio_config_t io_conf;
     io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
     io_conf.mode = GPIO_MODE_OUTPUT;
@@ -65,181 +74,16 @@ static void motor_csro_3t2r_relay_led_task(void *args)
     io_conf.pull_up_en = 0;
     gpio_config(&io_conf);
 
-    while (true)
-    {
-        bool update = false;
-        if (last_state != motor)
-        {
-            printf("state %d\r\n", motor);
-            last_state = motor;
-            update = true;
-            if (motor == STOP || motor == STOP_TO_CLOSE || motor == STOP_TO_OPEN)
-            {
-                gpio_set_level(RELAY_OPEN_NUM, 0);
-                gpio_set_level(RELAY_CLOSE_NUM, 0);
-                relay_count_100ms = 5;
-            }
-            else if (motor == OPEN)
-            {
-                gpio_set_level(RELAY_OPEN_NUM, 1);
-                gpio_set_level(RELAY_CLOSE_NUM, 0);
-                relay_count_100ms = 600;
-            }
-            else if (motor == CLOSE)
-            {
-                gpio_set_level(RELAY_OPEN_NUM, 0);
-                gpio_set_level(RELAY_CLOSE_NUM, 1);
-                relay_count_100ms = 600;
-            }
-        }
+    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
+    io_conf.pull_down_en = 0;
+    io_conf.pull_up_en = 1;
+    gpio_config(&io_conf);
 
-        if (relay_count_100ms > 0)
-        {
-            relay_count_100ms--;
-            if (relay_count_100ms == 0)
-            {
-                motor = (motor == STOP_TO_CLOSE) ? CLOSE : (motor == STOP_TO_OPEN) ? OPEN : STOP;
-            }
-        }
-        led_count_100ms = (led_count_100ms + 1) % 10;
-        if (led == FLASH && led_count_100ms >= 5)
-        {
-            gpio_set_level(LED_01_NUM, led_on[0]);
-            gpio_set_level(LED_02_NUM, led_on[1]);
-            gpio_set_level(LED_03_NUM, led_on[2]);
-        }
-        else
-        {
-            gpio_set_level(LED_01_NUM, led_on[0]);
-            gpio_set_level(LED_02_NUM, led_on[1]);
-            gpio_set_level(LED_03_NUM, led_on[2]);
-        }
-        if (update)
-        {
-            motor_csro_3t2r_mqtt_update();
-        }
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-    }
-    vTaskDelete(NULL);
-}
-
-static void motor_csro_3t2r_touch_task(void *args)
-{
-    static uint16_t first_touch_value[4];
-    static uint16_t single_holdtime[3];
-    static uint16_t triple_holdtime;
-    touch_pad_init();
-    touch_pad_set_voltage(TOUCH_HVOLT_2V7, TOUCH_LVOLT_0V5, TOUCH_HVOLT_ATTEN_1V);
-    for (int i = 0; i < 4; i++)
-    {
-        touch_pad_config(i, 0);
-    }
-    touch_pad_filter_start(10);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    for (int i = 0; i < 4; i++)
-    {
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-        touch_pad_read_filtered(i, &first_touch_value[i]);
-    }
-
-    while (true)
-    {
-        uint8_t touch_state[3];
-        uint16_t touch_value_g[3];
-        led_mode led_temp = NORMAL;
-        for (uint8_t i = 0; i < 4; i++)
-        {
-            uint16_t touch_value;
-            touch_pad_read_filtered(i, &touch_value);
-            if (i != 1)
-            {
-                touch_state[i == 0 ? 0 : i == 2 ? 1 : 2] = (first_touch_value[i] > touch_value && (first_touch_value[i] - touch_value >= THRESHOLD)) ? 1 : 0;
-                touch_value_g[i == 0 ? 0 : i == 2 ? 1 : 2] = touch_value;
-                led_on[i == 0 ? 0 : i == 2 ? 1 : 2] = touch_state[i == 0 ? 0 : i == 2 ? 1 : 2];
-            }
-        }
-        if (mqttclient != NULL)
-        {
-            sprintf(mqttinfo.pub_topic, "csro/touchkey/state");
-            sprintf(mqttinfo.content, "%d(%d) || %d(%d) || %d(%d)\r\n", first_touch_value[0] - touch_value_g[0], touch_value_g[0], first_touch_value[2] - touch_value_g[1], touch_value_g[1], first_touch_value[3] - touch_value_g[2], touch_value_g[2]);
-            esp_mqtt_client_publish(mqttclient, mqttinfo.pub_topic, mqttinfo.content, 0, 0, 1);
-        }
-        if (touch_state[0] + touch_state[1] + touch_state[2] == 1)
-        {
-            if (triple_holdtime >= 1000 && triple_holdtime <= 1500)
-            {
-                esp_restart();
-            }
-            triple_holdtime = 0;
-            single_holdtime[0] = (single_holdtime[0] + 1) * touch_state[0];
-            single_holdtime[1] = (single_holdtime[1] + 1) * touch_state[1];
-            single_holdtime[2] = (single_holdtime[2] + 1) * touch_state[2];
-            if (single_holdtime[0] == 4)
-            {
-                motor = (motor == STOP || motor == STOP_TO_CLOSE) ? OPEN : (motor == CLOSE) ? STOP_TO_OPEN : motor;
-                // if (motor == STOP || motor == STOP_TO_CLOSE)
-                // {
-                //     motor = OPEN;
-                // }
-                // else if (motor == CLOSE)
-                // {
-                //     motor = STOP_TO_OPEN;
-                // }
-            }
-            else if (single_holdtime[1] == 4)
-            {
-                motor = STOP;
-            }
-            else if (single_holdtime[2] == 4)
-            {
-                if (motor == STOP || motor == STOP_TO_OPEN)
-                {
-                    motor = CLOSE;
-                }
-                else if (motor == OPEN)
-                {
-                    motor = STOP_TO_CLOSE;
-                }
-            }
-        }
-        else if (touch_state[0] + touch_state[1] + touch_state[2] == 3)
-        {
-            triple_holdtime++;
-            printf("triple_holdtime %d\r\n", triple_holdtime);
-            single_holdtime[0] = 0;
-            single_holdtime[1] = 0;
-            single_holdtime[2] = 0;
-            if (triple_holdtime >= 1000 && triple_holdtime <= 1500)
-            {
-                led_temp = FLASH;
-            }
-            else if (triple_holdtime > 1500)
-            {
-                esp_restart();
-            }
-        }
-        else
-        {
-            if (triple_holdtime >= 1000 && triple_holdtime <= 1500)
-            {
-                esp_restart();
-            }
-            triple_holdtime = 0;
-            single_holdtime[0] = 0;
-            single_holdtime[1] = 0;
-            single_holdtime[2] = 0;
-        }
-        led = led_temp;
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-    }
-    vTaskDelete(NULL);
-}
-
-void csro_motor_csro_3t2r_init(void)
-{
-    printf("csro_motor_csro_3t2r_init\r\n");
-    xTaskCreate(motor_csro_3t2r_relay_led_task, "motor_csro_3t2r_relay_led_task", 2048, NULL, configMAX_PRIORITIES - 8, NULL);
+    gpio_set_level(TOUCH_EN_NUM, 1);
     xTaskCreate(motor_csro_3t2r_touch_task, "motor_csro_3t2r_touch_task", 2048, NULL, configMAX_PRIORITIES - 6, NULL);
+    xTaskCreate(motor_csro_3t2r_relay_task, "motor_csro_3t2r_relay_task", 2048, NULL, configMAX_PRIORITIES - 8, NULL);
 }
 
 void csro_motor_csro_3t2r_on_connect(esp_mqtt_event_handle_t event)
