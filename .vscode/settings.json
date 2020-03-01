@@ -6,6 +6,19 @@
         "esp_netif.h": "c",
         "esp_netif_types.h": "c",
         "esp_netif_lwip_internal.h": "c",
-        "tcpip_adapter.h": "c"
+        "tcpip_adapter.h": "c",
+        "chrono": "c",
+        "algorithm": "c",
+        "*.ipp": "c",
+        "optional": "c",
+        "istream": "c",
+        "ostream": "c",
+        "ratio": "c",
+        "system_error": "c",
+        "array": "c",
+        "functional": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c"
     }
 }

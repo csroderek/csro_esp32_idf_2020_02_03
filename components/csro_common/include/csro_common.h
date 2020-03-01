@@ -12,7 +12,8 @@
 #include "nvs_flash.h"
 #include "mqtt_client.h"
 #include "driver/gpio.h"
-#include "driver/touch_pad.h"
+#include "driver/ledc.h"
+#include "driver/timer.h"
 #include "cJSON.h"
 #include "lwip/sockets.h"
 
@@ -22,7 +23,7 @@
 #define MANUFACTURER "NANJING CSRO CO.,LTD."
 #define SOFT_VERSION "2020-02-03"
 
-#define MOTOR_CSRO_3T2R
+#define DLIGHT_CSRO_3T3SCR
 /*
 #define MOTOR_CSRO_3T2R
 #define DLIGHT_CSRO_3T3SCR

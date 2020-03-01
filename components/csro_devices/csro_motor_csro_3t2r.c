@@ -8,13 +8,38 @@
 
 #define RELAY_OPEN_NUM GPIO_NUM_27
 #define RELAY_CLOSE_NUM GPIO_NUM_14
-#define LED_01_NUM GPIO_NUM_5
-#define LED_02_NUM GPIO_NUM_18
-#define LED_03_NUM GPIO_NUM_19
 #define TOUCH_EN_NUM GPIO_NUM_16
 
 #define GPIO_INPUT_PIN_SEL ((1ULL << TOUCH_01_NUM) | (1ULL << TOUCH_02_NUM) | (1ULL << TOUCH_03_NUM))
-#define GPIO_OUTPUT_PIN_SEL ((1ULL << RELAY_OPEN_NUM) | (1ULL << RELAY_CLOSE_NUM) | (1ULL << LED_01_NUM) | (1ULL << LED_02_NUM) | (1ULL << LED_03_NUM) | (1ULL << TOUCH_EN_NUM))
+#define GPIO_OUTPUT_PIN_SEL ((1ULL << RELAY_OPEN_NUM) | (1ULL << RELAY_CLOSE_NUM) | (1ULL << TOUCH_EN_NUM))
+
+#define LEDC_TOTAL_NUM 3
+#define LEDC_TIMER LEDC_TIMER_0
+#define LEDC_MODE LEDC_LOW_SPEED_MODE
+#define LEDC_CH0_GPIO 5
+#define LEDC_CH0_CHANNEL LEDC_CHANNEL_0
+#define LEDC_CH1_GPIO 18
+#define LEDC_CH1_CHANNEL LEDC_CHANNEL_1
+#define LEDC_CH2_GPIO 19
+#define LEDC_CH2_CHANNEL LEDC_CHANNEL_2
+
+ledc_channel_config_t ledc_channel[LEDC_TOTAL_NUM] = {
+    {.channel = LEDC_CH0_CHANNEL,
+     .duty = 0,
+     .gpio_num = LEDC_CH0_GPIO,
+     .speed_mode = LEDC_MODE,
+     .timer_sel = LEDC_TIMER},
+    {.channel = LEDC_CH1_CHANNEL,
+     .duty = 0,
+     .gpio_num = LEDC_CH1_GPIO,
+     .speed_mode = LEDC_MODE,
+     .timer_sel = LEDC_TIMER},
+    {.channel = LEDC_CH2_CHANNEL,
+     .duty = 0,
+     .gpio_num = LEDC_CH2_GPIO,
+     .speed_mode = LEDC_MODE,
+     .timer_sel = LEDC_TIMER},
+};
 
 typedef enum
 {
@@ -54,12 +79,45 @@ static void motor_csro_3t2r_relay_task(void *args)
 
 static void motor_csro_3t2r_touch_task(void *args)
 {
+    uint8_t relay_status[2] = {0, 0};
+    static uint32_t hold_time[3];
     while (true)
     {
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-        gpio_set_level(LED_01_NUM, gpio_get_level(TOUCH_01_NUM));
-        gpio_set_level(LED_02_NUM, gpio_get_level(TOUCH_02_NUM));
-        gpio_set_level(LED_03_NUM, gpio_get_level(TOUCH_03_NUM));
+        uint8_t touch_statue[3] = {gpio_get_level(TOUCH_01_NUM), gpio_get_level(TOUCH_02_NUM), gpio_get_level(TOUCH_03_NUM)};
+
+        for (uint8_t i = 0; i < 3; i++)
+        {
+            if (touch_statue[i] == 0)
+            {
+                hold_time[i]++;
+            }
+            else
+            {
+                hold_time[i] = 0;
+            }
+        }
+
+        if (hold_time[0] == 2)
+        {
+            relay_status[0] = (relay_status[0] + 1) % 2;
+            gpio_set_level(RELAY_OPEN_NUM, relay_status[0]);
+        }
+        if (hold_time[1] == 2)
+        {
+            relay_status[0] = (relay_status[0] + 1) % 2;
+            gpio_set_level(RELAY_OPEN_NUM, relay_status[0]);
+        }
+        if (hold_time[2] == 2)
+        {
+            relay_status[1] = (relay_status[1] + 1) % 2;
+            gpio_set_level(RELAY_CLOSE_NUM, relay_status[1]);
+        }
+        for (uint8_t i = 0; i < LEDC_TOTAL_NUM; i++)
+        {
+            ledc_set_duty(ledc_channel[i].speed_mode, ledc_channel[i].channel, touch_statue[i] == 0 ? 0 : 7500);
+            ledc_update_duty(ledc_channel[i].speed_mode, ledc_channel[i].channel);
+        }
+        vTaskDelay(20 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);
 }
@@ -81,6 +139,18 @@ void csro_motor_csro_3t2r_init(void)
     io_conf.pull_up_en = 1;
     gpio_config(&io_conf);
 
+    ledc_timer_config_t ledc_timer = {
+        .duty_resolution = LEDC_TIMER_13_BIT, // resolution of PWM duty
+        .freq_hz = 5000,                      // frequency of PWM signal
+        .speed_mode = LEDC_MODE,              // timer mode
+        .timer_num = LEDC_TIMER               // timer index
+    };
+    ledc_timer_config(&ledc_timer);
+    for (uint8_t i = 0; i < LEDC_TOTAL_NUM; i++)
+    {
+        ledc_channel_config(&ledc_channel[i]);
+    }
+    vTaskDelay(200 / portTICK_PERIOD_MS);
     gpio_set_level(TOUCH_EN_NUM, 1);
     xTaskCreate(motor_csro_3t2r_touch_task, "motor_csro_3t2r_touch_task", 2048, NULL, configMAX_PRIORITIES - 6, NULL);
     xTaskCreate(motor_csro_3t2r_relay_task, "motor_csro_3t2r_relay_task", 2048, NULL, configMAX_PRIORITIES - 8, NULL);
