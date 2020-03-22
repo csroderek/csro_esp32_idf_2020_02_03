@@ -31,7 +31,8 @@
                 "C:/Espressif/esp-idf/components/newlib/platform_include",
                 "C:/Espressif/esp-idf/components/esp_netif/lwip",
                 "C:/Espressif/esp-idf/components/tcpip_adapter/include",
-                "C:/Espressif/esp-idf/components/lwip/include/apps"
+                "C:/Espressif/esp-idf/components/lwip/include/apps",
+                "${workspaceFolder}/components/csro_common/include"
             ],
             "defines": [
                 "_DEBUG",

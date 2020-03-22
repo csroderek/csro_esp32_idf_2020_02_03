@@ -20,10 +20,11 @@
 //#define USE_CLOUD_SERVER
 //#define USE_ASSIGNED_ROUTER
 
-#define MANUFACTURER "NANJING CSRO CO.,LTD."
+#define MANUFACTURER "南京金星宇节能技术有限公司"
 #define SOFT_VERSION "2020-02-03"
 
 #define DLIGHT_CSRO_3T3SCR
+
 /*
 #define MOTOR_CSRO_3T2R
 #define DLIGHT_CSRO_3T3SCR
